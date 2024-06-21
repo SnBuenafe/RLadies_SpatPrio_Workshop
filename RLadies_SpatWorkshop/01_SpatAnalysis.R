@@ -1,5 +1,9 @@
 #packages
-pacman::p_load(tidyverse, sf, rnaturalearth, mregions)
+pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, mregions, tmap)
+
+#Define crs ##also give ESRI example
+cCRS <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m no_defs"
+LatLon <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 
 # paths
 inputFeat <- file.path("Input", "DATA", "Features")
@@ -16,24 +20,38 @@ ggplot2::ggplot()+
 
 ## Raster
 # important packages: terra, stars, raster (deprecated, don't use anymore, but might see in old code)
+dwCorals <- rast(file.path("Input", "Extra_Data", "YessonEtAl_Consensus.tif")) 
+plot(dwCorals)
 
-### check data using ggplot
+dwCorals <- read_stars(file.path("Input", "Extra_Data", "YessonEtAl_Consensus.tif")) 
+plot(dwCorals)
 
 ## csv
+turtle1 <- read_csv(file.path("Input", "Extra_Data", "turtle_Argos.csv")) %>%
+  drop_na(c("Latitude", "Longitude")) %>%
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = LatLon) 
 
 ### check data using ggplot
+ggplot2::ggplot()+
+  geom_sf(data = turtle1)
 
 # Bonus: plotting with tmap
+tm_shape(turtle1) + 
+  tm_dots(col = "DeployID",
+          palette = "Blues", 
+          title = "ID #")
 
-# Set crs (normally directly when loading data but here step by step)
-#Define crs ##also give ESRI example
-cCRS <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m no_defs"
-LatLon <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+# Creating an interactive map with tmaps
+library(leaflet) #need to keep data small with leaflet; need to now check the size of our dataset
+print(object.size(turtle1), units = "Kb")
 
-# Spatial data wrangling
-# important packages: 
+leaflet(turtle1) %>%
+  addTiles() %>%
+  addCircleMarkers(radius = 0.1)
 
-# Spatial analysis
+# Spatial data wrangling and spatial analysis
+# important packages: dplyr, sf
+
 ## Create a boundary
 GalapEcoregions <- c(20172:20174)
 
