@@ -8,6 +8,8 @@ pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, mregions, tmap, prior
 
 #Define crs ##also give ESRI example
 cCRS <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m no_defs"
+#or 
+cCRS <- "ESRI:54009"
 
 # paths
 inputDat <- file.path("Input", "DATA")
