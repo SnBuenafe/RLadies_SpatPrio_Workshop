@@ -1,40 +1,26 @@
-# original code from Jason Everett
-# adapted by Sandra Neubert
-
-get_hexagonalPUs <- function(Bndry,
-                             InnerB,
-                             CellArea = 1000,
-                             inverse = FALSE) {
-
-  diameter <- 2 * sqrt((CellArea * 1e6) / ((3 * sqrt(3) / 2))) * sqrt(3) / 2 # Diameter in m's
-
-  # First create planning units for the whole region
-  PUs <- sf::st_make_grid(Bndry,
-                          square = FALSE,
-                          cellsize = c(diameter, diameter),
-                          what = "polygons") %>%
-    sf::st_sf()
+splnr_plot_Solution <- function(soln, colorVals = c("TRUE" = "#3182bd", "FALSE" = "#c6dbef"),
+                                legendTitle = "Planning Units") {
+  soln <- soln %>%
+    dplyr::select("solution_1") %>%
+    dplyr::mutate(solution_1 = as.logical(.data$solution_1)) # Making it logical helps with the plotting
   
-  # First get all the PUs partially/wholly within the planning region
-  logi_Reg <- sf::st_centroid(PUs) %>%
-    sf::st_intersects(Bndry) %>%
-    lengths() > 0 # Get logical vector instead of sparse geometry binary
-  
-  PUs <- PUs[logi_Reg, ] # Get TRUE
-  
-  # Second, get all the pu's with < 50 % area on land (approximated from the centroid)
-  logi_Ocean <- sf::st_centroid(PUs) %>%
-    sf::st_intersects(InnerB) %>%
-    lengths() > 0 # Get logical vector instead of sparse geometry binary
-  
-  if (inverse == FALSE) {
-    PUs <- PUs[!logi_Ocean, ] # Get FALSE
-  } else {
-    PUs <- PUs[logi_Ocean == TRUE, ] # Get TRUE
-  }
-  
-  PUs <- PUs %>%
-    dplyr::mutate(cellID = dplyr::row_number()) # Add a cell ID reference
-  
-  return(PUs)
+  gg <- ggplot2::ggplot() +
+    ggplot2::geom_sf(data = soln, ggplot2::aes(fill = .data$solution_1), colour = NA, size = 0.1, show.legend = TRUE) +
+    ggplot2::coord_sf(xlim = sf::st_bbox(soln)$xlim, ylim = sf::st_bbox(soln)$ylim) +
+    ggplot2::scale_fill_manual(
+      name = legendTitle,
+      values = colorVals,
+      labels = c("Not Selected", "Selected"),
+      aesthetics = c("colour", "fill"),
+      guide = ggplot2::guide_legend(
+        override.aes = list(linetype = 0),
+        nrow = 2,
+        order = 1,
+        direction = "horizontal",
+        title.position = "top",
+        title.hjust = 0.5
+      )
+    ) + 
+    theme_bw()
 }
+

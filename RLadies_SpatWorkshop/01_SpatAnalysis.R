@@ -1,22 +1,26 @@
-#packages
-pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, mregions, tmap)
+# Workshop Spatial Analysis and Prioritization in R for R Ladies Santa Barbara
+# Part 1: Spatial Analysis
+# 02/07/2024
+# Sandra Neubert and Tin Buenafe 
 
-#Define crs ##also give ESRI example
+#packages
+pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, mregions, tmap, leaflet())
+
+#Define crs 
 cCRS <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m no_defs"
 LatLon <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 
 # paths
-inputFeat <- file.path("Input", "DATA", "Features")
+inputDat <- file.path("Input", "DATA")
 
 # Load data
 ## Shape files
 #important packages: sf
-dat <- sf::st_read(file.path(inputFeat,"Abyssal_hills.shp"))
-dat2 <- sf::st_read(file.path(inputFeat,"Chelonia_mydas.shp"))
+chelonia_mydas <- sf::st_read(file.path(inputDat, "shp","Chelonia_mydas.shp"))
 
 ### check data using ggplot
 ggplot2::ggplot()+
-  geom_sf(data = dat2)
+  geom_sf(data = chelonia_mydas)
 
 ## Raster
 # important packages: terra, stars, raster (deprecated, don't use anymore, but might see in old code)
@@ -26,7 +30,7 @@ plot(dwCorals)
 dwCorals <- read_stars(file.path("Input", "Extra_Data", "YessonEtAl_Consensus.tif")) 
 plot(dwCorals)
 
-## csv
+## csv #data from Jaime Restrepo 
 turtle1 <- read_csv(file.path("Input", "Extra_Data", "turtle_Argos.csv")) %>%
   drop_na(c("Latitude", "Longitude")) %>%
   st_as_sf(coords = c("Longitude", "Latitude"), crs = LatLon) 
@@ -35,19 +39,86 @@ turtle1 <- read_csv(file.path("Input", "Extra_Data", "turtle_Argos.csv")) %>%
 ggplot2::ggplot()+
   geom_sf(data = turtle1)
 
+# add land data
+world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf") %>%
+  st_transform(LatLon)
+
+ggplot() +
+  geom_sf(data = world, fill = "lightgray", color = "black") +
+  geom_sf(data = turtle1) +
+  ggplot2::coord_sf(xlim = sf::st_bbox(turtle1)$xlim, ylim = sf::st_bbox(turtle1)$ylim) # crop land data to extent of tracking data
+
 # Bonus: plotting with tmap
+## color based on ID
 tm_shape(turtle1) + 
   tm_dots(col = "DeployID",
           palette = "Blues", 
           title = "ID #")
 
-# Creating an interactive map with tmaps
-library(leaflet) #need to keep data small with leaflet; need to now check the size of our dataset
-print(object.size(turtle1), units = "Kb")
+# Creating an interactive map
+print(object.size(turtle1), units = "Kb") #need to keep data small with leaflet; need to now check the size of our dataset
 
 leaflet(turtle1) %>%
   addTiles() %>%
   addCircleMarkers(radius = 0.1)
+
+## color based on time
+turtle1 <- turtle1 %>%
+  dplyr::mutate(date = sub(".* ", "", Date),
+                time = sub(" .*", "", Date),
+                date_time = dmy_hms(paste(date, time)))
+
+turtleTimes <- range(turtle1$date_time)
+oranges <- colorNumeric("YlOrRd", domain = turtleTimes)
+
+leaflet(turtle1) %>%
+  addTiles() %>%
+  addCircleMarkers( radius = 3, 
+                    color = 'grey80', 
+                    weight = 0.1, 
+                    fill = TRUE, 
+                    fillOpacity = 0.7, 
+                    fillColor = ~oranges(date_time))
+
+# Creating an animation with a custom image
+# install EBImage
+# if (!require("BiocManager", quietly = TRUE))
+#   install.packages("BiocManager")
+# 
+# BiocManager::install("EBImage")
+# install ggimage
+# install.packages("ggimage")
+library(ggimage)
+#install.packages("gganimate")
+library(gganimate)
+
+## prep data for animation: needs to be dataframe
+turtle_anim <- read_csv(file.path("Input", "Extra_Data", "turtle_Argos.csv")) %>%
+  drop_na(c("Latitude", "Longitude")) %>%
+  dplyr::mutate(date = sub(".* ", "", Date),
+                time = sub(" .*", "", Date),
+                date_time = dmy_hms(paste(date, time))) %>%
+  dplyr::mutate(image = sample(c("Input/turtleCartoon.png")))
+
+## Animated plot of turtle tracks
+p_animated <- ggplot() +
+  geom_sf(data = world, fill = "lightgray", color = "black") +  # Base map layer
+  geom_sf(data = turtle1, size = 0.07) +  # Data points
+  ggplot2::coord_sf(xlim = sf::st_bbox(turtle1)$xlim, ylim = sf::st_bbox(turtle1)$ylim) +
+  geom_image(aes(x = Longitude, y = Latitude, image=image), data = turtle_anim, size = 0.06) + # uses the ggimage function geom_image()
+  labs(title = 'Time: {frame_time}') +  # Title format with frame time
+  transition_time(date_time) + # what time information to use: for us: turtle tracking points
+  shadow_mark(exclude_layer = 3) + # previous data points remain on the plot, apart from the one that is in excluded_layer
+  theme_bw()  # Remove default ggplot2 theme for clean appearance
+
+## Animate the plot
+#p_animated <- animate(p_animated, nframes = 100, duration = 15, fps = 10,height = 16,
+#                      width = 8, units = "cm", res = 150)
+
+## Save plot
+anim_save("Figures/animated_mapTurtle.gif", animate(p_animated, nframes = 300, duration = 15, fps = 10, 
+                                              detail = 10, height = 16,
+                                              width = 8, units = "cm", res = 200))
 
 # Spatial data wrangling and spatial analysis
 # important packages: dplyr, sf
@@ -79,6 +150,7 @@ gg_PUs <- ggplot2::ggplot() +
   ggplot2::labs(subtitle = "Planning Units")
 
 ### Using centroids and intersections: creating a grid with hexagonal planning units and exclude land
+# code adapted from Jason Everett
 #define PU settings
 Shape <- "Hexagon" # "Shape of PUs
 PU_size <- 200 # km2
@@ -88,14 +160,15 @@ landmass <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf") %>
   st_transform(cCRS)
 
 #get PUs
-diameter <- 2 * sqrt((CellArea * 1e6) / ((3 * sqrt(3) / 2))) * sqrt(3) / 2 # Diameter in m's
+diameter <- 2 * sqrt((PU_size * 1e6) / ((3 * sqrt(3) / 2))) * sqrt(3) / 2 # Diameter in m's
 
 # First create a grid again
 PUs <- sf::st_make_grid(meowDat,
                         square = FALSE,
                         cellsize = c(diameter, diameter),
                         what = "polygons") %>%
-  sf::st_sf()
+  sf::st_sf() %>%
+  st_transform(cCRS)
 
 # Then get all the PUs partially/wholly within the planning region
 logi_Reg <- sf::st_centroid(PUs) %>%
@@ -122,3 +195,5 @@ gg_PUsLand <- ggplot2::ggplot() +
   coord_sf(xlim = st_bbox(meowDat)$xlim, ylim = st_bbox(meowDat)$ylim) + #crop landmass
   ggplot2::labs(subtitle = "Planning Units") + 
   theme_bw()
+
+ggsave(file.path("Figures", "gg_PUsLand.png"),  width = 6, height = 8, dpi = 200)
