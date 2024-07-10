@@ -1,0 +1,461 @@
+---
+title: "Spatial Workflows in R"
+author: "Tin Buenafe and Sandra Neubert"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_float:
+      collapsed: true
+    code_folding: "hide"
+---
+
+Hi there! Welcome to Spatial Workflows in R by Sandra and Tin (SaTin). This R Markdown will run through all the material (and more!) that we will cover in the workshop. While the code mostly reflects what's already in the R Scripts (see the [Github repository](https://github.com/SnBuenafe/RLadies_SpatPrio_Workshop) we set up), watch out for some coding tips and tricks that will be highlighted across this markdown.
+
+*Notes: You can "show"/"hide" all code by clicking on the drop down box on the top right corner of the page. We have also added the option to copy the code in each code chunk.*
+
+```{r klippy, echo = FALSE, include = TRUE}
+# remotes::install_github("rlesur/klippy")
+klippy::klippy()
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+```
+
+# Part 1: Spatial data 101
+
+In this workshop, we are going to demonstrate some of the fundamental skills needed in dealing with spatial data using spatial data based in the Galapagos Exclusive Economic Zone (EEZ). The data used in this workshop are not ours and we attribute the source of the data when we use them across this markdown. Please also see the Reference section at the end of this markdown file.
+
+## Loading preliminaries
+
+It is best practice to load and define all "preliminaries" at the start of your R script. These preliminaries range from R packages to variables used across the R script, but typically it encompasses anything and everything that is used and reused throughout the R script.
+
+First, we load the necessary R packages. A really good R package to install the versions of the R packages that are in CRAN is **`pacman`**. We are going to install and load packages throughout the course of this workshop, but a common best practice is to install and load all necessary packages to run each script at the top of the R script.
+
+```{r loadpackage1}
+install.packages("pacman")
+pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, rnaturalearthdata, mregions, tmap, leaflet, here)
+```
+
+Another best practice is to define the input paths as a variable to enhance the reproducibility of your R script. A good R package that breaches the difference in setting file paths in different Operating Systems (OS; e.g., Windows syntax vs Mac), among other cool things, is the **`here`** R package. If you want to read more about the functionality of the package's functions, take a look at [their website](https://here.r-lib.org/).
+
+```{r filepath1}
+# Define file paths
+inputDat <- file.path("Input", "DATA")
+
+# An alternative way of doing this using the `here` R package is:
+inputDat <- here("Input", "DATA")
+```
+
+Next, we define the Coordinated Reference System (CRS) that will be used throughout this R script. There are different ways to do this, but the two most common ones is using the *EPSG code* and the *PROJ4 strings*. Here's a [pdf](https://www.nceas.ucsb.edu/sites/default/files/2020-04/OverviewCoordinateReferenceSystems.pdf) that was prepared by M. Frazier and is freely available online that talks about the CRS syntax really well. It is recommended to use the EPSG code, but we find that using the PROJ4 string version of the CRS is useful for plotting maps that are not necessarily centered in the Meridian.
+
+```{r definecrs}
+# Using EPSG codes
+# cCRS <- "ESRI: 54009"
+# LatLon <- "ESRI: 4326"
+
+# Using PROJ4 strings
+cCRS <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m no_defs" # Mollweide Projection
+LatLon <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" # WGS84 Projection
+```
+
+## Loading data
+
+As mentioned in the presentation, spatial data takes one of two forms— vector and raster. Vector data is represented as points, lines, or polygons. Raster data is represented in grids of cells (i.e., pixels). There are pros and cons to each of the data formats, but the beauty of dealing with spatial data in R is that you can easily convert the two forms of spatial data. Here, we show how you can load vector and raster data saved in different file formats. Vector data is usually saved as a shapefile (`.shp`) and attached to this are other files that contain the metadata (e.g., `.shx`, `.dbf`). All of these are usually in one folder. 
+
+A really useful R package that everyone should familiarize themselves with to wrangle vector files is the **`sf` R package**. Below, we used the *Chelonia mydas* (green sea turtle) data in the Galapagos from the [Marxan Planning Platform (MaPP)](https://marxanplanning.org/).
+
+```{r loadshape}
+## Shape files
+# Important packages: sf
+chelonia_mydas <- st_read(file.path(inputDat, "Features", "shp", "Chelonia_mydas.shp"))
+
+### Check data using ggplot
+ggplot() +
+  geom_sf(data = chelonia_mydas)
+```
+
+
+Raster data is usually saved as a GeoTIFF (Geo Tagged Image File Formats; `.tiff`). Another file format that is really good at compressing/storing large amounts of data is the netCDF (Network Common Data Form; `.nc`) but is (personally) really annoying to wrangle in R (but apparently really easy to do in Python)!
+
+A really useful R package for wrangling raster files (and also vectors!) is the **`terra` R package**. **`stars`** is also a good R package and is particularly strong and fast when dealing with rasters saved as netCDFs. Note that `raster` is an old R package that you might find in tutorials online but you shouldn't use this anymore because it's deprecated and (if you haven't already) start transitioning to `terra`! Below, we used data from Yesson et al. made available online by the [`oceandatr` R package](https://github.com/emlab-ucsb/oceandatr) developed by the emLab in UCSB.
+
+```{r loadraster}
+## Raster
+# Important packages: terra, stars, raster (deprecated, don't use anymore, but might see in old code)
+
+# Loading using terra
+dwCorals <- rast(file.path("Input", "Extra_Data", "YessonEtAl_Consensus.tif")) 
+plot(dwCorals)
+
+# Loading using stars
+dwCorals <- read_stars(file.path("Input", "Extra_Data", "YessonEtAl_Consensus.tif")) 
+plot(dwCorals)
+```
+
+Spatial data can also be stored as simple data frames, with rows as either the vector units (points, lines, polygons) or raster units (grid cells) and the columns as the geographic coordinates of the units (latitude/longitude) and the attributes of each unit. Thus, we can load a simple `.csv` file with the geographic coordinates and transform it into an `sf` object (following an `sf` R package workflow) or a `SpatRast`/`SpatVect` (following a `terra` R package workflow). Here, we convert the data frame into an `sf` object. Below, we used tracking data of green turtles collected in Costa Rica from Jaime Restrepo.
+
+```{r loadcsv}
+## csv (data from Jaime Restrepo)
+turtle1 <- read_csv(file.path("Input", "Extra_Data", "turtle_Argos.csv")) %>%
+  drop_na(c("Latitude", "Longitude")) %>%
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = LatLon) 
+
+### check data using ggplot
+ggplot2::ggplot()+
+  geom_sf(data = turtle1)
+```
+
+## Plotting spatial data
+
+We've already done some basic plotting above to visualize the data as we load them (a habit we recommend doing!). Now let's take this a step further and add some more attributes.
+
+We can plot these with the land masses as well, which we can easily get from the R package **`rnaturalearth`**.
+
+```{r plotwithland}
+# Add land data
+world <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  st_transform(LatLon)
+
+ggplot() +
+  geom_sf(data = world, fill = "lightgray", color = "black") +
+  geom_sf(data = turtle1) +
+  coord_sf(xlim = st_bbox(turtle1)$xlim, ylim = st_bbox(turtle1)$ylim) # crop land data to extent of tracking data
+```
+
+We've been using **`ggplot()`** to map these `sf` objects (*Note: `geom_sf()` is a really useful function to be familiar with!*). Another really good R package for plotting is **`tmap`**. With `tmap`, you can easily plot just like in `ggplot` by setting `tmap_mode(mode = "plot")` which is already the default, but in combination with the **`leaflet` R package**, you can view the plots interactively by setting `tmap_mode(mode = "view")`.
+
+```{r plotwithtmap}
+# Plot the turtle data using tmap
+# Colkor is based on the ID
+tmap_mode(mode = "plot") # You don't have to do this because it's the default, but this is just to show that the mapping mode can be changed.
+tm_shape(turtle1) + 
+  tm_dots(col = "DeployID",
+          palette = "Blues", 
+          title = "ID #")
+
+# Plot an interactive map
+tmap_mode(mode = "view")
+tm_shape(turtle1) + 
+  tm_dots(col = "DeployID",
+          palette = "Blues", 
+          title = "ID #")
+```
+
+You can also create an interactive `leaflet` map using `leafleft` functions.
+
+```{r plotwithleaflet}
+# Creating an interactive map
+print(object.size(turtle1), units = "Kb") #need to keep data small with leaflet; need to now check the size of our dataset
+
+leaflet(turtle1) %>%
+  addTiles() %>%
+  addCircleMarkers(radius = 0.1)
+
+## Color based on time
+turtle1 <- turtle1 %>%
+  mutate(date = sub(".* ", "", Date),
+                time = sub(" .*", "", Date),
+                date_time = dmy_hms(paste(date, time)))
+
+turtleTimes <- range(turtle1$date_time)
+oranges <- colorNumeric("YlOrRd", domain = turtleTimes)
+
+leaflet(turtle1) %>%
+  addTiles() %>%
+  addCircleMarkers(radius = 3, 
+                   color = 'grey80', 
+                   weight = 0.1, 
+                   fill = TRUE, 
+                   fillOpacity = 0.7, 
+                   fillColor = ~oranges(date_time))
+```
+
+Who also said there are things you can't do through coding?! (there are, by the way. I'm just being a bit dramatic -Tin) Below, we show that you can also animate your data, which is especially useful when you're showing tracking/movement data. Here we use the `ggimage` and `gganimate` R packages. Again, ideally, these packages should be installed and loaded at the top of the script, but for the purposes of this bonus portion of the workshop, we opted to load them here.
+
+```{r animate}
+# Install EBImage
+# if (!require("BiocManager", quietly = TRUE))
+#   install.packages("BiocManager")
+# 
+# BiocManager::install("EBImage")
+# Install ggimage
+# install.packages("ggimage")
+library(ggimage)
+# install.packages("gganimate")
+library(gganimate)
+
+## Prepare the data for animation: needs to be dataframe
+turtle_anim <- read_csv(file.path("Input", "Extra_Data", "turtle_Argos.csv")) %>%
+  drop_na(c("Latitude", "Longitude")) %>%
+  mutate(date = sub(".* ", "", Date),
+                time = sub(" .*", "", Date),
+                date_time = dmy_hms(paste(date, time))) %>%
+  mutate(image = sample(c("Input/turtleCartoon.png")))
+
+## Animated plot of turtle tracks
+p_animated <- ggplot() +
+  geom_sf(data = world, fill = "lightgray", color = "black") +  # Base map layer
+  geom_sf(data = turtle1, size = 0.07) +  # Data points
+  coord_sf(xlim = st_bbox(turtle1)$xlim, ylim = st_bbox(turtle1)$ylim) +
+  geom_image(aes(x = Longitude, y = Latitude, image=image), data = turtle_anim, size = 0.06) + # uses the ggimage function geom_image()
+  labs(title = 'Time: {frame_time}') +  # Title format with frame time
+  transition_time(date_time) + # what time information to use: for us: turtle tracking points
+  shadow_mark(exclude_layer = 3) + # previous data points remain on the plot, apart from the one that is in excluded_layer
+  theme_bw()  # Remove default ggplot2 theme for clean appearance
+
+## Animate the plot
+p_animated <- gganimate::animate(p_animated, nframes = 100, duration = 15, fps = 10,height = 16,
+                                 width = 8, units = "cm", res = 150)
+p_animated
+## Save plot
+# anim_save("Figures/animated_mapTurtle.gif", gganimate::animate(p_animated, nframes = 300, duration = 15, fps = 10, 
+#                                               detail = 10, height = 16,
+#                                               width = 8, units = "cm", res = 200)) # gganimate::animate to make sure it uses the correct animate() function
+
+```
+
+## Spatial data wrangling and spatial analysis
+
+There are so many other things that we can do with spatial data in R aside from visualizing them. In this next section, we are going to wrangle spatial data, particularly the Marine Ecoregions of the World (MEOW) that is available online by using the `mregions` R package. The code chunk below shows the following things:
+
+1. There are three different MEOWs within the Galapagos'.
+2. We take the union of this three and make it into one polygon which will serve as our *planning region/study area* (using `st_union()`).
+3. We then reproject this from an un-projected WGS84 vector to the Mollweide Equal-Area projection (using `st_transform()`).
+
+```{r galapagosMEOW}
+## Create a boundary
+GalapEcoregions <- c(20172:20174)
+
+meowDat <- mregions::mr_shp(key = "Ecoregions:ecoregions") %>% 
+  dplyr::filter(.data$eco_code %in% GalapEcoregions) %>% # dplyr::filter to make sure filter() function used is from the dplyr R package
+  st_union() %>%
+  st_as_sf() %>%
+  st_transform(cCRS) %>%
+  rename(geometry = x) %>%
+  st_set_geometry(., "geometry") 
+
+ggplot() +
+  geom_sf(data = meowDat)
+```
+
+We can also divide the entire planning region into discrete units using the `st_make_grid()` function. Here, we first show how to do this with square-shaped grids.
+
+```{r galapagosgrid_square}
+## Make grid
+### Use boundary to create grid
+dat_PUs <- st_make_grid(meowDat, cellsize = 20000) %>% #cellsize: opposite edges
+  st_sf() %>%
+  mutate(cellID = row_number()) # Add a cell ID reference
+
+### Plot grid
+gg_PUs <- ggplot() +
+  geom_sf(data = dat_PUs, colour = "grey80", fill = NA, size = 0.1, show.legend = FALSE)+
+  coord_sf(xlim = st_bbox(dat_PUs)$xlim, ylim = st_bbox(dat_PUs)$ylim) +
+  labs(subtitle = "Planning Units")
+
+gg_PUs
+```
+
+Now that we've shown the power of `st_make_grid()`, we'll take this a steup further and show you how we can create hexagonal grids across a planning region/study area and excluding certain portions of it. This "masking" step (i.e., excluding certain areas of the planning region) is important when you're limiting your study area to a particular ecosystem (e.g., marine) and want to exclude certain regions (e.g., land).
+
+We first define the parameters of the hexagonal grid and define the landmass (the area we want to exclude).
+
+```{r galapagosgrid_hexagon1}
+### Using centroids and intersections: creating a grid with hexagonal planning units and exclude land
+# Code adapted from Jason Everett
+# Define PU settings
+Shape <- "Hexagon" # "Shape of PUs
+PU_size <- 200 # km2
+
+# Set landmass (to exclude from analysis)
+landmass <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  st_transform(cCRS)
+
+# Calculate the diameter of the hexagonal grid
+diameter <- 2 * sqrt((PU_size * 1e6) / ((3 * sqrt(3) / 2))) * sqrt(3) / 2 # Diameter in m's
+```
+
+Then, we create hexagonal grids over the entire planning region.
+
+```{r galapagosgrid_hexagon2}
+# First create a grid again
+PUs <- st_make_grid(meowDat,
+                    square = FALSE,
+                    cellsize = c(diameter, diameter),
+                    what = "polygons") %>%
+  st_sf() %>%
+  st_transform(cCRS)
+
+ggplot() +
+  geom_sf(data = PUs, colour = "grey80", fill = NA, size = 0.1, show.legend = FALSE) +
+  coord_sf(xlim = st_bbox(PUs)$xlim, ylim = st_bbox(PUs)$ylim) +
+  labs(subtitle = "Planning Units")
+```
+
+Then, we start excluding hexagonal grids that intersect >50% with the landmass (using `st_intersects()`) and keep only the grid cells that do not intersect with the landmass and are within the planning region.
+
+```{r galapagosgrid_hexagon3}
+# Then get all the PUs partially/wholly within the planning region
+logi_Reg <- st_centroid(PUs) %>%
+  st_intersects(meowDat) %>%
+  lengths() > 0 # Get logical vector instead of sparse geometry binary
+
+PUs <- PUs[logi_Reg, ] # Get TRUE
+
+# Second, get all the pu's with < 50 % area on land (approximated from the centroid)
+logi_Ocean <- st_centroid(PUs) %>%
+  st_intersects(landmass) %>%
+  lengths() > 0 # Get logical vector instead of sparse geometry binary
+
+dat_PUs <- PUs[!logi_Ocean, ] %>%
+  mutate(cellID = row_number()) # Add a cell ID reference
+
+### Plot grid
+(gg_PUsBasic <- ggplot() +
+  geom_sf(data = dat_PUs, colour = "grey80", fill = NA, size = 0.1, show.legend = FALSE))
+
+(gg_PUsLand <- ggplot() +
+  geom_sf(data = dat_PUs, colour = "grey80", fill = NA, size = 0.1, show.legend = FALSE)+
+  geom_sf(data = landmass, colour = "black", fill = "black", show.legend = FALSE) + #plot landmass
+  coord_sf(xlim = st_bbox(meowDat)$xlim, ylim = st_bbox(meowDat)$ylim) + #crop landmass
+  labs(subtitle = "Planning Units") + 
+  theme_bw())
+```
+
+Note: another tip to "evaluate"/"print" your code without having to call the variable in a separate line is enclosing the entire thing in parentheses ()!
+
+# Part 2: Spatial prioritization
+
+*Spatial prioritization* refers to quantitative methods that aid in identifying priority areas for a particular action (e.g., conservation) while meeting certain criteria (e.g., meeting area-based targets). In a conservation context, spatial prioritization is used to identify areas for conservation. It is a step in a bigger, more elaborate process called *systematic conservation planning* that refers to the structured process of identifying, assigning, and monitoring areas for protection, conservation, or restoration. Read more about systematic conservation planning and spatial prioritization in [Margules and Pressey (2000)](https://www.nature.com/articles/35012251) and [Tallis et al. (2021)](https://nyaspubs.onlinelibrary.wiley.com/doi/10.1111/nyas.14651).
+
+We are not going to talk about spatial prioritization in detail in this workshop, but if you are interested in learning more about spatial prioritization and conservation planning, we suggest going through the [`prioritizr` website](https://prioritizr.net/) and the [Marxan website](https://marxansolutions.org/training/). The latter doesn't talk about coding it in R, but it goes through the principles that are crucial to learn in the field of spatial prioritization and systematic conservation planning in general.
+
+## Load data
+
+Before we can generate a spatial prioritization, we need to load the spatial data, which we have prepared in the previous portion of the workshop. Recall, that we are using the Galapagos EEZ as our *planning region* (i.e., study area) and we have already created our *planning units* (i.e., smallest unit of the analysis) as hexagonal grids of 200km2 area. We are defining our projection as the Mollweide Equal-Area projection.
+
+```{r loaddata1}
+# Load packages
+pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, mregions, tmap, prioritizr)
+
+# Define CRS ##also give ESRI example
+cCRS <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m no_defs"
+#or 
+cCRS <- "ESRI:54009"
+
+# Define file paths
+inputDat <- file.path("Input", "DATA")
+
+# Load Planning Units
+PUs <- st_read(file.path(inputDat,  "PUs","Galapagos_Planning_Units.shp")) %>%
+  st_transform(cCRS) %>%
+  select(-"cost") %>%
+  rename(cellID = puid)
+
+ggplot() +
+  geom_sf(data = PUs)
+```
+
+We also expand this by adding more *features* (i.e., the things we care about that would have corresponding *targets*) to conserve and defining a *cost* (i.e., in this prioritization example, this is what we want to minimize) layer.
+
+```{r loaddata2}
+# Create an sf object for all features
+features <- readRDS(file.path(inputDat, "Features", "fans.rds")) %>%
+  left_join(readRDS(file.path(inputDat, "Features", "plateau.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "ridge.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "seamount.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "abyssal_hills.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "abyssal_plains.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "abyssal_mountains.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "basin.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "blue_footed_booby.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "great_frigatebird.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "green_turtle.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "silky_shark.rds")) %>% st_drop_geometry(), by = "cellID") %>%
+  left_join(readRDS(file.path(inputDat, "Features", "tiger_shark.rds")) %>% st_drop_geometry(), by = "cellID") 
+
+# Add cost
+cost <- st_read(file.path(inputDat, "Cost", "cost_surface.shp")) %>%
+  st_transform(cCRS) %>%
+  rename(cellID = puid)
+
+ggplot() +
+  geom_sf(data = cost, aes(fill = .data$cost))
+
+out_sf <- features %>%
+  left_join(cost %>% sf::st_drop_geometry(), by = "cellID") 
+```
+
+Now, we do the actual spatial prioritization. We are going to use the **R package `prioritizr`** to run the prioritizations. In the R scripts, Sandra shows that you can source other scripts at the top of your R script. This is another best practice that we highly recommend! It would be great if you can make your R scripts short and sequential, so that you can "call"/"source" these R scripts when you're running a bunch of analyses that are all part of a workflow.
+
+```{r dummy, eval = FALSE}
+source("02_SpatPrior_PrepData.R")
+source("utils-functions.R")
+```
+
+```{r dummy2, include = FALSE}
+source("utils-functions.R")
+```
+
+## Set prioritization preliminaries
+
+Apart from loading the spatial data, we need to prepare a couple of things for `prioritizr`. We first need to know the "names" (or their identifiers in the dataset) of the *features.*
+
+```{r prioritization1}
+# Extract feature names
+col_name <- features %>%
+  select(-"cellID") %>%
+  st_drop_geometry() %>%
+  colnames()
+```
+
+We then need the *targets* that we're assigning for each feature. Here, we show how we can assign equal targets for all features and how we can also assign different targets for different features. In a practical conservation planning setting, you'd afford higher targets to features that are more important.
+
+```{r prioritization2}
+# Create targets object
+targets <- rep(0.3, length(col_name)) # Same target for all
+
+# Higher target for species with tracking data
+targets <- data.frame(feature = col_name) %>%
+  mutate(Category = c(rep("Geomorphic", 8), rep("Tracking Data", 5))) %>%
+  mutate(target = if_else(Category == "Tracking Data", 50 / 100, 5 / 100))
+```
+
+## Set up conservation problem
+
+We now have all the necessary information needed to run the prioritization. Next, we set up the conservation "problem" using `problem()` from `prioritizr`. In this function, we define all the spatial data (i.e., in this example, the object `out_sf`), what the features are called in `out_sf`, and the what the cost's column name is in `out_sf`. We then use the minimum set objective function to solve this conservation problem (i.e., minimizing the cost while meeting all of the features' targets) using `add_min_set_objective()`. We also assign the targets for each of the features using `add_relative_targets()`. The result of solving this conservation problem would be a binary one (1/0, yes/no, TRUE/FALSE), so the algorithm will assign whether a planning unit has been selected or not selected (using `add_binary_decisions()`).
+
+```{r prioritization3}
+dat_problem <- problem(out_sf,
+                       features = col_name,
+                       cost_column = "cost") %>%
+  add_min_set_objective() %>%
+  add_relative_targets(targets$target) %>%
+  #add_boundary_penalties(0.1) %>%
+  add_binary_decisions() %>%
+  add_default_solver(verbose = FALSE)
+
+# If you already have a solver in your machine, comment these out and make sure that the solver is loaded (e.g., library(gurobi))
+# if (!require(remotes)) install.packages("remotes")
+# remotes::install_github("dirkschumacher/rcbc")
+library(rcbc)
+```
+
+## Solve and plot the solution
+Then, we solve the prioritization using `solve.ConservationProblem()`.
+
+```{r prioritization4}
+dat_soln <- dat_problem %>%
+  solve.ConservationProblem()
+
+# Plot solution with predefined function
+(gg_sol <- splnr_plot_Solution(dat_soln))
+```
+
+And there you have it, you have generated a spatial prioritization! "Solving" the conservation "problem" is a bit anticlimactic, but this shows that all the work you've done to generate a spatial prioritization comes from working with spatial data.
+
+# Closing remarks
+
+And that's the workshop folks!
+
+We hope you've learned something new along the way, whether it's a coding tip/trick, a new concept or a new skill! We also hoped you had fun!! With this workshop, we wanted to show how different skills, such as handling spatial data, can be used in conservation exercises. If you have any questions, please feel free to contact Sandra (s.neubert@uq.edu.au) or Tin (k.buenafe@uq.edu.au).
