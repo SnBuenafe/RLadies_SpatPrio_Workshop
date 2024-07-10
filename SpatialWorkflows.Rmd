@@ -32,6 +32,7 @@ It is best practice to load and define all "preliminaries" at the start of your 
 First, we load the necessary R packages. A really good R package to install the versions of the R packages that are in CRAN is **`pacman`**. We are going to install and load packages throughout the course of this workshop, but a common best practice is to install and load all necessary packages to run each script at the top of the R script.
 
 ```{r loadpackage1}
+install.packages("pacman")
 pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, rnaturalearthdata, mregions, tmap, leaflet, here)
 ```
 

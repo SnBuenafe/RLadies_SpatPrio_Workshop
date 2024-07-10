@@ -7,6 +7,7 @@
 # Preliminaries -----------------------------------------------------------
 
 # Load packages
+# install.packages("pacman")
 pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, rnaturalearthdata, mregions, tmap, leaflet)
 
 # Define file paths
