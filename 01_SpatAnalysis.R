@@ -32,6 +32,7 @@ ggplot() +
 # Important packages: terra, stars, raster (deprecated, don't use anymore, but might see in old code)
 
 # Loading using terra
+# Yesson et al data was made available in the oceandatr R package (https://github.com/emlab-ucsb/oceandatr)
 dwCorals <- rast(file.path("Input", "Extra_Data", "YessonEtAl_Consensus.tif")) 
 plot(dwCorals)
 
