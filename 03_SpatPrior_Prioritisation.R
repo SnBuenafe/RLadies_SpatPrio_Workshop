@@ -29,6 +29,11 @@ targets <- data.frame(feature = col_name) %>%
 
 # Create a conservation problem -------------------------------------------
 
+# If you already have a solver in your machine, comment these out and make sure that the solver is loaded (e.g., library(gurobi))
+# if (!require(remotes)) install.packages("remotes")
+# remotes::install_github("dirkschumacher/rcbc")
+library(rcbc)
+
 dat_problem <- problem(out_sf,
                        features = col_name,
                        cost_column = "cost") %>%
@@ -37,11 +42,6 @@ dat_problem <- problem(out_sf,
   #add_boundary_penalties(0.1) %>%
   add_binary_decisions() %>%
   add_default_solver(verbose = FALSE)
-
-# If you already have a solver in your machine, comment these out and make sure that the solver is loaded (e.g., library(gurobi))
-# if (!require(remotes)) install.packages("remotes")
-# remotes::install_github("dirkschumacher/rcbc")
-library(rcbc)
 
 # Solve conservation problem ----------------------------------------------
 
