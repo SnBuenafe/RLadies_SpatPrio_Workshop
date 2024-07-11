@@ -32,7 +32,7 @@ It is best practice to load and define all "preliminaries" at the start of your 
 First, we load the necessary R packages. A really good R package to install the versions of the R packages that are in CRAN is **`pacman`**. We are going to install and load packages throughout the course of this workshop, but a common best practice is to install and load all necessary packages to run each script at the top of the R script.
 
 ```{r loadpackage1}
-install.packages("pacman")
+#install.packages("pacman")
 pacman::p_load(tidyverse, sf, terra, stars, rnaturalearth, rnaturalearthdata, mregions, tmap, leaflet, here)
 ```
 
@@ -459,3 +459,25 @@ And there you have it, you have generated a spatial prioritization! "Solving" th
 And that's the workshop folks!
 
 We hope you've learned something new along the way, whether it's a coding tip/trick, a new concept or a new skill! We also hoped you had fun!! With this workshop, we wanted to show how different skills, such as handling spatial data, can be used in conservation exercises. If you have any questions, please feel free to contact Sandra (s.neubert@uq.edu.au) or Tin (k.buenafe@uq.edu.au).
+
+# References
+
+Acuña-Marrero, D., Smith, A.N.H., Hammerschlag, N., Hearn, A., Anderson, M.J., Calich, H., Pawley, M.D.M., Fischer, C., Salinas-de-León, P., 2017. Residency and movement patterns of an apex predatory shark (Galeocerdo cuvier) at the Galápagos Marine Reserve. PLoS One 12, e0183669.
+
+Galapagos Movement Consortium, Movebank Data Repository https://www.movebank.org/cms/movebank-main
+Harris, P.T., Macmillan-Lawler, M., Rupp, J. and Baker, E.K., 2014. Geomorphology of the oceans. Marine Geology, 352, pp.4-24.
+
+Hearn, A.R., Acuña, D., Ketchum, J.T., Peñaherrera, C., Green, J., Marshall, A., Guerrero, M., Shillinger, G., 2014. Elasmobranchs of the Galápagos Marine Reserve, In (J. Denkinger, L. Vinueza, eds.) Galápagos Marine Reserve: a dynamic socio-ecological system., pp. 23-59. Springer.
+
+Hearn, A.R., Green, J., Román, M.H., Acuña-Marrero, D., Espinoza, E., Klimley, A.P., 2016. Adult female whale sharks make long-distance movements past Darwin Island (Galápagos, Ecuador) in the Eastern Tropical Pacific. Marine Biology 163, 214.
+
+Hearn, A.R., Espinoza, E., Ketchum, J., Green, J., Peñaherrera, C., Arauz, R., Fischer, C., Steiner, T., Shillinger, G., Henderson, S., Bessudo, S., Soler, G., Klimley, P., 2017. Una década de seguimiento de los movimientos de tiburones resalta la importancia ecológica de las islas del norte: Darwin y Wolf, In (L. Cayot, D. Cruz, eds.) Informe Galápagos 2015-2016. pp. 132-142. DPNG, CGREG, FCD & GC, Puerto Ayora, Galápagos, Ecuador.
+
+Hearn A, Cárdenas S, Allen H, Zurita L, Gabela-Flores MV, Peñaherrera-Palma CR, Castrejón M, Cruz S, Kelley D, Jeglinski J, Bruno J, Jones J, Naveira-Garabato A, Forryan A, Viteri C, Picho J, Donnelly A, Tudhope A, Wilson M & G Reck G (2022). A Blueprint for Marine Spatial Planning of Ecuador’s Exclusive Economic Zone around the Galápagos Marine Reserve. Universidad San Francisco de Quito / PEW Bertarelli Ocean Legacy, Quito, Ecuador, 361 p.
+
+Parra, D.M., Andrés, M., Jiménez, J., Banks, S., Muñoz, J.P., 2013. Evaluación de la incidencia de impacto de embarcaciones y distribución de la tortuga verde (Chelonia mydas) en Galápagos. Retrieved from Puerto Ayora, Galapagos, Ecuador
+
+Seminoff, J.A., Zárate, P., Coyne, M., Foley, D.G., Parker, D., Lyon, B.N., Dutton, P.H., 2008. Post-nesting migrations of Galápagos green turtles Chelonia mydas in relation to oceanographic conditions: integrating satellite telemetry with remotely sensed ocean data. Endangered Species Research 4, 57-72
+
+Shillinger, G.L., Swithenbank, A.M., Bailey, H., Bograd, S.J., Castelton, M.R., Wallace, B.P., Spotila, J.R., Paladino, F.V., Piedra, R., Block, B.A., 2011. Vertical and horizontal habitat preferences of post-nesting leatherback turtles in the South Pacific Ocean. Marine Ecology Progress Series 422, 275-289.
+
