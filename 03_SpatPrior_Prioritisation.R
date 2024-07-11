@@ -30,9 +30,19 @@ targets <- data.frame(feature = col_name) %>%
 # Create a conservation problem -------------------------------------------
 
 # If you already have a solver in your machine, comment these out and make sure that the solver is loaded (e.g., library(gurobi))
+
+# If you are a Windows user, lpsympony might work better
+# if (!require(remotes)) install.packages("remotes")
+# remotes::install_bioc("lpsymphony")
+# Check their website for more details: https://www.bioconductor.org/packages/release/bioc/html/lpsymphony.html
+# library(lpsymphony)
+
+# If you are a Mac/Linux, rcbc might work better
 # if (!require(remotes)) install.packages("remotes")
 # remotes::install_github("dirkschumacher/rcbc")
+# Check their README for more details https://github.com/dirkschumacher/rcbc
 library(rcbc)
+library(lpsymphony)
 
 dat_problem <- problem(out_sf,
                        features = col_name,
