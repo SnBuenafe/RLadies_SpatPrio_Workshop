@@ -426,9 +426,17 @@ targets <- data.frame(feature = col_name) %>%
 We now have all the necessary information needed to run the prioritization. Next, we set up the conservation "problem" using `problem()` from `prioritizr`. In this function, we define all the spatial data (i.e., in this example, the object `out_sf`), what the features are called in `out_sf`, and the what the cost's column name is in `out_sf`. We then use the minimum set objective function to solve this conservation problem (i.e., minimizing the cost while meeting all of the features' targets) using `add_min_set_objective()`. We also assign the targets for each of the features using `add_relative_targets()`. The result of solving this conservation problem would be a binary one (1/0, yes/no, TRUE/FALSE), so the algorithm will assign whether a planning unit has been selected or not selected (using `add_binary_decisions()`).
 
 ```{r prioritization3}
-# If you already have a solver in your machine, comment these out and make sure that the solver is loaded (e.g., library(gurobi))
+# Installing the solvers
+# If you are a Windows user, lpsympony might work better
+# if (!require(remotes)) install.packages("remotes")
+# remotes::install_bioc("lpsymphony")
+# Check their website for more details: https://www.bioconductor.org/packages/release/bioc/html/lpsymphony.html
+# library(lpsymphony)
+
+# If you are a Mac/Linux, rcbc might work better
 # if (!require(remotes)) install.packages("remotes")
 # remotes::install_github("dirkschumacher/rcbc")
+# Check their README for more details https://github.com/dirkschumacher/rcbc
 library(rcbc)
 
 dat_problem <- problem(out_sf,
