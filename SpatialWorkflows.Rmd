@@ -62,7 +62,7 @@ LatLon <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" # WGS84 Projection
 
 As mentioned in the presentation, spatial data takes one of two forms— vector and raster. Vector data is represented as points, lines, or polygons. Raster data is represented in grids of cells (i.e., pixels). There are pros and cons to each of the data formats, but the beauty of dealing with spatial data in R is that you can easily convert the two forms of spatial data. Here, we show how you can load vector and raster data saved in different file formats. Vector data is usually saved as a shapefile (`.shp`) and attached to this are other files that contain the metadata (e.g., `.shx`, `.dbf`). All of these are usually in one folder. 
 
-A really useful R package that everyone should familiarize themselves with to wrangle vector files is the **`sf` R package**. Below, we used the *Chelonia mydas* (green sea turtle) data in the Galapagos from the [Marxan Planning Platform (MaPP)](https://marxanplanning.org/).
+A really useful R package that everyone should familiarize themselves with to wrangle vector files is the [**`sf` R package**](https://r-spatial.github.io/sf/) (here's a really good (cheat sheet)[https://github.com/rstudio/cheatsheets/blob/main/sf.pdf] for the `sf` package). Below, we used the *Chelonia mydas* (green sea turtle) data in the Galapagos from the [Marxan Planning Platform (MaPP)](https://marxanplanning.org/).
 
 ```{r loadshape}
 ## Shape files
@@ -77,7 +77,7 @@ ggplot() +
 
 Raster data is usually saved as a GeoTIFF (Geo Tagged Image File Formats; `.tiff`). Another file format that is really good at compressing/storing large amounts of data is the netCDF (Network Common Data Form; `.nc`) but is (personally) really annoying to wrangle in R (but apparently really easy to do in Python)!
 
-A really useful R package for wrangling raster files (and also vectors!) is the **`terra` R package**. **`stars`** is also a good R package and is particularly strong and fast when dealing with rasters saved as netCDFs. Note that `raster` is an old R package that you might find in tutorials online but you shouldn't use this anymore because it's deprecated and (if you haven't already) start transitioning to `terra`! Below, we used data from Yesson et al. made available online by the [`oceandatr` R package](https://github.com/emlab-ucsb/oceandatr) developed by the emLab in UCSB.
+A really useful R package for wrangling raster files (and also vectors!) is the [**`terra` R package**](https://rspatial.github.io/terra/reference/terra-package.html). [**`stars`**](https://r-spatial.github.io/stars/) is also a good R package and is particularly strong and fast when dealing with rasters saved as netCDFs. Note that `raster` is an old R package that you might find in tutorials online but you shouldn't use this anymore because it's deprecated and (if you haven't already) start transitioning to `terra`! Below, we used data from Yesson et al. made available online by the [`oceandatr` R package](https://github.com/emlab-ucsb/oceandatr) developed by the emLab in UCSB.
 
 ```{r loadraster}
 ## Raster
@@ -122,7 +122,7 @@ ggplot() +
   coord_sf(xlim = st_bbox(turtle1)$xlim, ylim = st_bbox(turtle1)$ylim) # crop land data to extent of tracking data
 ```
 
-We've been using **`ggplot()`** to map these `sf` objects (*Note: `geom_sf()` is a really useful function to be familiar with!*). Another really good R package for plotting is **`tmap`**. With `tmap`, you can easily plot just like in `ggplot` by setting `tmap_mode(mode = "plot")` which is already the default, but in combination with the **`leaflet` R package**, you can view the plots interactively by setting `tmap_mode(mode = "view")`.
+We've been using **`ggplot()`** (*bonus*: here's a really good reference for plotting with `ggplot`: [R Graph Gallery](https://r-graph-gallery.com/ggplot2-package.html)) to map these `sf` objects (*Note: `geom_sf()` is a really useful function to be familiar with!*). Another really good R package for plotting is [**`tmap`**](https://r-tmap.github.io/tmap-book/). With `tmap`, you can easily plot just like in `ggplot` by setting `tmap_mode(mode = "plot")` which is already the default, but in combination with the [**`leaflet` R package**](https://leafletjs.com/), you can view the plots interactively by setting `tmap_mode(mode = "view")`.
 
 ```{r plotwithtmap}
 # Plot the turtle data using tmap
@@ -170,7 +170,7 @@ leaflet(turtle1) %>%
                    fillColor = ~oranges(date_time))
 ```
 
-Who also said there are things you can't do through coding?! (there are, by the way. I'm just being a bit dramatic -Tin) Below, we show that you can also animate your data, which is especially useful when you're showing tracking/movement data. Here we use the `ggimage` and `gganimate` R packages. Again, ideally, these packages should be installed and loaded at the top of the script, but for the purposes of this bonus portion of the workshop, we opted to load them here.
+Who also said there are things you can't do through coding?! (there are, by the way. I'm just being a bit dramatic -Tin) Below, we show that you can also [animate your data](https://r-graph-gallery.com/animation.html), which is especially useful when you're showing tracking/movement data. Here we use the `ggimage` and `gganimate` R packages. Again, ideally, these packages should be installed and loaded at the top of the script, but for the purposes of this bonus portion of the workshop, we opted to load them here.
 
 ```{r animate}
 # Install EBImage
@@ -216,7 +216,7 @@ p_animated
 
 ## Spatial data wrangling and spatial analysis
 
-There are so many other things that we can do with spatial data in R aside from visualizing them. In this next section, we are going to wrangle spatial data, particularly the Marine Ecoregions of the World (MEOW) that is available online by using the `mregions` R package. The code chunk below shows the following things:
+There are so many other things that we can do with spatial data in R aside from visualizing them. In this next section, we are going to wrangle spatial data, particularly the Marine Ecoregions of the World (MEOW) that is available online using the `mregions` R package. The code chunk below shows the following things:
 
 1. There are three different MEOWs within the Galapagos'.
 2. We take the union of this three and make it into one polygon which will serve as our *planning region/study area* (using `st_union()`).
